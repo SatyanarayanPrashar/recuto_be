@@ -6,9 +6,36 @@ from .scrapers import scrape_jobs
 from .models import Job
 from .serializers import JobSerializer
 
+from django.core.cache import cache
+import time
+import redis
+redis_instance = redis.StrictRedis(host='127.0.0.1', port=6379, db=1)
+
+# class JobListView(generics.ListCreateAPIView):
+#     queryset = Job.objects.all()
+#     serializer_class = JobSerializer
 class JobListView(generics.ListCreateAPIView):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
+
+    def get(self, request, *args, **kwargs):
+        # Define a cache key
+        cache_key = 'job_list'
+        # Try to get the data from cache
+        cached_jobs = cache.get(cache_key)
+
+        if cached_jobs is not None:
+            # If cache exists, use it
+            return Response(cached_jobs)
+
+        # If cache doesn't exist, get data from the database
+        response = super().get(request, *args, **kwargs)
+
+        # Store the data in cache
+        cache.set(cache_key, response.data, timeout=60*15)  # Cache timeout is 15 minutes
+
+        return response
+
 
 class JobDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Job.objects.all()
