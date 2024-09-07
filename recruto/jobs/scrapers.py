@@ -67,18 +67,10 @@ def scrape_jobs():
     scraped_jobs = []
 
     try:
-        # logging.info("Initializing WebDriver")
         driver = webdriver.Chrome(service=service, options=options)
-
-        # logging.info("Navigating to jobfound.org")
         driver.get('https://jobfound.org/')
         wait = WebDriverWait(driver, 30)
-
-        # logging.info("Waiting for page to load")
         wait.until(EC.presence_of_element_located((By.TAG_NAME, "body")))
-
-        # logging.info(f"Page title: {driver.title}")
-        # logging.info(f"Current URL: {driver.current_url}")
 
         time.sleep(5)
 
@@ -89,49 +81,31 @@ def scrape_jobs():
             "div[role='button']"
         ]
 
+        all_elements = []
         for selector in selectors:
             try:
                 elements = driver.find_elements(By.CSS_SELECTOR, selector)
-                # logging.info(f"Found {len(elements)} elements with selector: {selector}")
-                # if len(elements) > 0:
-                    # for i, element in enumerate(elements[:5]):  # Log first 5 elements
-                        # logging.info(f"Element {i} text: {element.text[:100]}...")
-                    # break
+                all_elements.extend(elements)
             except Exception as e:
                 logging.error(f"Error with selector {selector}: {str(e)}")
 
-        # if len(elements) == 0:
-        #     logging.info("No elements found. Logging page source.")
-        #     logging.info(driver.page_source[:1000])
-
-        for index, element in enumerate(elements, 1):
+        for index, element in enumerate(all_elements, 0):
             try:
                 text_content = element.text.strip()
-                if text_content:
-                    # Split the content into individual job posts
-                    jobs = text_content.split("years")
-                    jobs = [job + " years" if i < len(jobs) - 1 else job for i, job in enumerate(jobs)]
-
-                    # Parse each job content and structure the data
-                    for job in jobs:
-                        parsed_job = parse_job_content(job.strip())
-                        if parsed_job:
-                            scraped_jobs.append(parsed_job)
-                            # logging.info(f"Parsed job: {parsed_job}")
+                # Check if the content is not empty
+                if text_content and len(text_content.split()) > 5:  # Ensure it's not too short
+                    parsed_job = parse_job_content(text_content)
+                    if parsed_job and parsed_job.get('title'):  # Ensure valid parsed data
+                        scraped_jobs.append(parsed_job)
+                else:
+                    logging.warning(f"Empty or irrelevant content at index {index}: '{text_content}'")
             except Exception as e:
                 logging.error(f"Error scraping element {index}: {str(e)}")
-
-        # Remove the last element from the list, if it's empty
-        if scraped_jobs and not any(scraped_jobs[-1].values()):  # Check if the last job has all empty fields
-            scraped_jobs.pop()
-
-        # logging.info(f"Total jobs scraped: {len(scraped_jobs)}")
 
     except Exception as e:
         logging.error(f"An error occurred during scraping: {str(e)}")
 
     finally:
-        # logging.info("Closing WebDriver")
         driver.quit()
 
     return scraped_jobs
