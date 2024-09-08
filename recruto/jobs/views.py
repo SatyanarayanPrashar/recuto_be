@@ -11,9 +11,12 @@ import time
 import redis
 redis_instance = redis.StrictRedis(host='127.0.0.1', port=6379, db=1)
 
-# class JobListView(generics.ListCreateAPIView):
-#     queryset = Job.objects.all()
-#     serializer_class = JobSerializer
+class JobwoRedisView(generics.ListCreateAPIView):
+    queryset = Job.objects.all()
+    serializer_class = JobSerializer
+
+
+# docker run -d --name redis-stack-server -p 6379:6379 redis/redis-stack-server:latest
 class JobListView(generics.ListCreateAPIView):
     queryset = Job.objects.all()
     serializer_class = JobSerializer
@@ -35,7 +38,6 @@ class JobListView(generics.ListCreateAPIView):
         cache.set(cache_key, response.data, timeout=60*15)  # Cache timeout is 15 minutes
 
         return response
-
 
 class JobDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = Job.objects.all()
